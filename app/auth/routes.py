@@ -1,7 +1,7 @@
 import os
 from flask import Blueprint, request, jsonify
 from app.database import get_connection
-from app.services.auth_service import criar_usuario
+from app.services.auth_service import criar_usuario, lista_todos_admins
 from werkzeug.utils import secure_filename
 
 auth_bp = Blueprint("auth", __name__)
@@ -68,3 +68,15 @@ def register():
         return jsonify(response), status
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@auth_bp.route('/admins', methods=['GET'])
+def lista_admins():
+    admins = lista_todos_admins()
+    return jsonify([
+        {
+            "nome": admin.nome,
+            "email": admin.email,
+            "is_admin": admin.is_admin,
+            "foto_url": admin.foto_url
+        } for admin in admins
+    ]), 200

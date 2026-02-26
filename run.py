@@ -1,10 +1,12 @@
 import os
 from app import create_app
 from app.database import get_connection
+from flask_cors import CORS
 
 def start_server():
     try:
         app = create_app()
+        CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
         host = os.getenv("FLASK_HOST", "127.0.0.1")
         port = int(os.getenv("FLASK_PORT", 5000))

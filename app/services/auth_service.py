@@ -30,3 +30,26 @@ def criar_usuario(nome, email, senha, is_admin=False, foto_url=None):
     conn.close()
 
     return {"message": "Usuário criado com sucesso", "id": user_id}, 201
+
+def lista_todos_admins():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT nome, email, is_admin, foto_url FROM usuarios
+    """)
+
+    administradores = []
+    for admin in administradores:
+        administradores.append({
+            "nome": admin[0],
+            "email": admin[1],
+            "is_admin": admin[2],
+            "foto_url": admin[3]
+        })
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {"message": "Usuários listados com sucesso"}, 200
