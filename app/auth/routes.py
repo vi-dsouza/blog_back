@@ -1,11 +1,11 @@
 import os
 from flask import Blueprint, request, jsonify
 from app.database import get_connection
-from app.services.auth_service import criar_usuario, lista_todos_admins
+from app.services.auth_service import criar_usuario, lista_todos_admins, del_admin
 from werkzeug.utils import secure_filename
 
 auth_bp = Blueprint("auth", __name__)
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 
 @auth_bp.route("/test-db")
 def test_db():
@@ -28,7 +28,7 @@ def login():
     email = data.get("email")
 
     conn = get_connection()
-    cursor = conn.cursor
+    cursor = conn.cursor()
 
     cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
     user = cursor.fetchone()
@@ -47,7 +47,9 @@ def register():
         nome = request.form.get("nome")
         email = request.form.get("email")
         senha = request.form.get("senha")
+        is_admin  = str(request.form.get("is_admin")).lower() == "true"
         foto = request.files.get("foto")
+        
 
         if not nome or not email or not senha:
             return jsonify({"error": "Campos obrigatórios faltando"}), 400
@@ -62,9 +64,9 @@ def register():
 
             foto.save(caminho)
 
-            foto_url = caminho
+            foto_url = filename
 
-        response, status = criar_usuario(nome, email, senha, foto_url=foto_url)
+        response, status = criar_usuario(nome, email, senha, is_admin=is_admin, foto_url=foto_url)
         return jsonify(response), status
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -72,11 +74,10 @@ def register():
 @auth_bp.route('/admins', methods=['GET'])
 def lista_admins():
     admins = lista_todos_admins()
-    return jsonify([
-        {
-            "nome": admin.nome,
-            "email": admin.email,
-            "is_admin": admin.is_admin,
-            "foto_url": admin.foto_url
-        } for admin in admins
-    ]), 200
+    return jsonify(admins), 200
+
+@auth_bp.route('/admin/del/<int:id>', methods=["DELETE"])
+def deletar_admin(id):
+    response, status = del_admin(id)
+    return jsonify(response), status
+
