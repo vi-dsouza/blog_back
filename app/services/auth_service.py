@@ -1,6 +1,10 @@
 import bcrypt
 from app.database import get_connection
 from flask import request
+import uuid
+import os
+
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 
 #cria admins
 def criar_usuario(nome, email, senha, is_admin=False, foto_url=None):
@@ -89,3 +93,104 @@ def del_admin(id):
         return {"message": "Administrador deletado com sucesso"}, 200
     except Exception as e:
         return {"error": str(e)}, 500
+
+#atualizar admin
+import os
+from werkzeug.utils import secure_filename
+
+def up_admin(id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "SELECT id, foto_url FROM usuarios WHERE id = %s",
+            (id,)
+        )
+
+        admin_atual = cursor.fetchone()
+
+        if not admin_atual:
+            return {"error": "Administrador não encontrado"}, 404
+
+        nome = request.form.get('nome')
+        email = request.form.get('email')
+        senha = request.form.get('senha')
+        is_admin = request.form.get('is_admin')
+
+        foto_arquivo = request.files.get('foto')
+
+        campos = []
+        valores = []
+
+        # nome
+        if nome:
+            campos.append("nome = %s")
+            valores.append(nome)
+
+        # email
+        if email:
+            campos.append("email = %s")
+            valores.append(email)
+
+        # senha
+        if senha:
+            senha_hash = bcrypt.hashpw(
+                senha.encode('utf-8'),
+                bcrypt.gensalt()
+            ).decode('utf-8')
+
+            campos.append("senha_hash = %s")
+            valores.append(senha_hash)
+
+        # is_admin
+        if is_admin is not None:
+            valor_admin = is_admin in ['1', 'true', 'True']
+
+            campos.append("is_admin = %s")
+            valores.append(valor_admin)
+
+        # foto
+        if foto_arquivo and foto_arquivo.filename != '':
+            # remove a foto antiga se existir
+            if admin_atual[1]:
+                caminho_antigo = os.path.join(UPLOAD_FOLDER, admin_atual[1])
+
+                if os.path.exists(caminho_antigo):
+                    os.remove(caminho_antigo)
+
+            # gera nome único
+            filename = f"{uuid.uuid4()}_{secure_filename(foto_arquivo.filename)}"
+
+            caminho_novo = os.path.join(UPLOAD_FOLDER, filename)
+
+            foto_arquivo.save(caminho_novo)
+
+            campos.append("foto_url = %s")
+            valores.append(filename)
+
+        if not campos:
+            return {"message": "Nenhum dado enviado para atualizar"}, 400
+
+        valores.append(id)
+
+        sql = f"""
+            UPDATE usuarios
+            SET {', '.join(campos)}
+            WHERE id = %s
+        """
+
+        cursor.execute(sql, tuple(valores))
+        conn.commit()
+
+        return {
+            "message": "Administrador atualizado com sucesso"
+        }, 200
+
+    except Exception as e:
+        conn.rollback()
+        return {"error": str(e)}, 500
+
+    finally:
+        cursor.close()
+        conn.close()
