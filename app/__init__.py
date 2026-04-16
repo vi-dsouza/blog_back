@@ -1,6 +1,7 @@
 import os
 from flask import Flask, send_from_directory
 from app.auth.routes import auth_bp
+from app.auth.routes_config import blog_bp
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 
@@ -10,6 +11,8 @@ def create_app():
     app.config.from_object("app.config.Config")
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
+
+    app.register_blueprint(blog_bp, url_prefix='/blog')
 
     @app.route('/uploads/<filename>')
     def uploaded_file(filename):
