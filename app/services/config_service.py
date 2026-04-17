@@ -24,7 +24,7 @@ def configurar(nome_blog, data_atualizacao, autor, tags_do_blog, descricao_blog,
     cursor.close()
     conn.close()
 
-    return {"message": "Configuração realizada com sucesso"}, 201
+    return {"message": "Configuração realizada com sucesso", "id": config_id}, 201
 
 def obter_ultima_configuracao():
     conn = get_connection()
