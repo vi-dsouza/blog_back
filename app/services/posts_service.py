@@ -46,13 +46,14 @@ def postagens():
         
         posts = []
         for row in rows:
+            post_url = f"{request.host_url}posts_image/{row[5]}" if row[5] else None
             posts.append({
                 "id": row[0],
                 "titulo": row[1],
                 "data": row[2].strftime('%Y-%m-%d') if row[2] else "",
                 "autor": row[3],
                 "hashtags": row[4],
-                "post_url": row[5],
+                "post_url": post_url,
                 "conteudo": row[6]
             })
         return posts
