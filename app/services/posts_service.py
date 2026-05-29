@@ -191,3 +191,15 @@ def editar_post(id_post):
     finally:
         cursor.close()
         conn.close()
+
+#contar postagens
+def contar_posts():
+    conn = get_connection()
+    cursor = conn.cursor()
+    try: 
+        cursor.execute("SELECT COUNT(*) FROM postagens")
+        count = cursor.fetchone()[0]
+        return count
+    finally:
+        cursor.close()
+        conn.close()

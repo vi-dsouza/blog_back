@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 # Certifique-se de que os caminhos de importação estão corretos para o seu projeto
 from app.auth.routes import token_required 
-from app.services.posts_service import criar_posts, postagens, de_post, editar_post
+from app.services.posts_service import criar_posts, postagens, de_post, editar_post, contar_posts
 
 post_bp = Blueprint("post", __name__)
 
@@ -102,3 +102,9 @@ def deletar_post(current_user_id, id_post):
 def atualizar_post(current_user_id, id_post):
     resultado, status = editar_post(id_post)
     return jsonify(resultado), status
+
+@post_bp.route("/qtd_posts", methods=["GET"])
+@token_required
+def qtd_posts(current_user_id):
+    count = contar_posts()
+    return jsonify(count)

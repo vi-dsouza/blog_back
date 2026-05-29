@@ -110,7 +110,7 @@ def test_db():
 
 @auth_bp.route("/register", methods=['POST'])
 @token_required
-def register(current_user_id): # Recebe o ID do decorador
+def register(): # Recebe o ID do decorador
     try:
         nome = request.form.get("nome")
         email = request.form.get("email")
@@ -118,8 +118,19 @@ def register(current_user_id): # Recebe o ID do decorador
         is_admin = str(request.form.get("is_admin")).lower() == "true"
         foto = request.files.get("foto")
 
-        if not nome or not email or not senha:
-            return jsonify({"error": "Campos obrigatórios faltando"}), 400
+        missing_fields = []
+        if not nome:
+            missing_fields.append("nome")
+        if not email:
+            missing_fields.append("email")
+        if not senha:
+            missing_fields.append("senha")
+
+        if missing_fields:
+            return jsonify({
+                "error": "Campos obrigatórios faltando",
+                "missing_fields": missing_fields
+            }), 400
         
         foto_url = None
         if foto:
