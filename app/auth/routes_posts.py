@@ -81,8 +81,8 @@ def criar_post(current_user_id):
         return jsonify({"error": str(e)}), 500
     
 @post_bp.route("/postagens", methods=["GET"])
-@token_required
-def buscar_posts(current_user_id):
+# @token_required
+def buscar_posts():
     try:
         posts = postagens()
         if posts:

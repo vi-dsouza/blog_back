@@ -56,8 +56,8 @@ def criar_config(current_user_id):
         return jsonify({"error": str(e)}), 500
 
 @blog_bp.route("/configuracao", methods=["GET"])
-@token_required
-def buscar_config(current_user_id):
+# @token_required
+def buscar_config():
     try:
         config = obter_ultima_configuracao()
         if config:
