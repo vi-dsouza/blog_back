@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 # Importações internas do seu projeto
 from app.database import get_connection
-from app.services.auth_service import criar_usuario, lista_todos_admins, del_admin, up_admin
+from app.services.auth_service import criar_usuario, lista_todos_admins, del_admin, up_admin, lista_autores
 
 load_dotenv()
 
@@ -110,12 +110,13 @@ def test_db():
 
 @auth_bp.route("/register", methods=['POST'])
 @token_required
-def register(): # Recebe o ID do decorador
+def register(current_user_id):
     try:
         nome = request.form.get("nome")
         email = request.form.get("email")
         senha = request.form.get("senha")
         is_admin = str(request.form.get("is_admin")).lower() == "true"
+        biografia = request.form.get("biografia")
         foto = request.files.get("foto")
 
         missing_fields = []
@@ -125,6 +126,8 @@ def register(): # Recebe o ID do decorador
             missing_fields.append("email")
         if not senha:
             missing_fields.append("senha")
+        if not biografia:
+            missing_fields.append("biografia")
 
         if missing_fields:
             return jsonify({
@@ -140,7 +143,7 @@ def register(): # Recebe o ID do decorador
             foto.save(caminho)
             foto_url = filename
 
-        response, status = criar_usuario(nome, email, senha, is_admin=is_admin, foto_url=foto_url)
+        response, status = criar_usuario(nome, email, senha, biografia, is_admin=is_admin, foto_url=foto_url)
         return jsonify(response), status
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -150,6 +153,12 @@ def register(): # Recebe o ID do decorador
 def lista_admins(current_user_id): # Recebe o ID do decorador
     admins = lista_todos_admins()
     return jsonify(admins), 200
+
+@auth_bp.route('/autores', methods=["GET"])
+def info_autores():
+    autores = lista_autores()
+    return jsonify(autores), 200
+
 
 @auth_bp.route('/admin/del/<int:id>', methods=["DELETE"])
 @token_required

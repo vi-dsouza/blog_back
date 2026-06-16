@@ -7,7 +7,7 @@ import os
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 
 #cria admins
-def criar_usuario(nome, email, senha, is_admin=False, foto_url=None):
+def criar_usuario(nome, email, senha, biografia, is_admin=False, foto_url=None):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -22,10 +22,10 @@ def criar_usuario(nome, email, senha, is_admin=False, foto_url=None):
     senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, is_admin, foto_url)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO usuarios (nome, email, senha_hash, biografia, is_admin, foto_url)
+        VALUES (%s, %s, %s, %s, %s, %s)
         RETURNING id;
-    """, (nome, email, senha_hash, is_admin, foto_url))
+    """, (nome, email, senha_hash, biografia, is_admin, foto_url))
 
     user_id = cursor.fetchone()[0]
 
@@ -41,7 +41,7 @@ def lista_todos_admins():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, nome, email, is_admin, foto_url FROM usuarios
+        SELECT id, nome, email, is_admin, biografia, foto_url FROM usuarios
     """)
 
     resultados = cursor.fetchall()
@@ -49,13 +49,14 @@ def lista_todos_admins():
     administradores = []
 
     for admin in resultados:
-        foto_url = f"{request.host_url}uploads/{admin[4]}" if admin[4] else None
+        foto_url = f"{request.host_url}uploads/{admin[5]}" if admin[5] else None
 
         administradores.append({ 
             "id": admin[0],
             "nome": admin[1], 
             "email": admin[2], 
             "is_admin": admin[3], 
+            "biografia": admin[4],
             "foto_url": foto_url 
         })
 
@@ -63,6 +64,32 @@ def lista_todos_admins():
     conn.close()
 
     return administradores
+
+#lista autores
+def lista_autores():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT nome, biografia, foto_url FROM usuarios
+    """)
+
+    resultado = cursor.fetchall()
+    info_autores = []
+
+    for autor in resultado:
+        foto_url = f"{request.host_url}uploads/{autor[2]}" if autor[2] else None
+
+        info_autores.append({
+            "nome": autor[0],
+            "biografia": autor[1],
+            "foto_url": foto_url
+        })
+
+    cursor.close()
+    conn.close()
+
+    return info_autores
 
 #deleta admins
 def del_admin(id):
@@ -117,6 +144,7 @@ def up_admin(id):
         email = request.form.get('email')
         senha = request.form.get('senha')
         is_admin = request.form.get('is_admin')
+        biografia = request.form.get('biografia')
 
         foto_arquivo = request.files.get('foto')
 
@@ -149,6 +177,11 @@ def up_admin(id):
 
             campos.append("is_admin = %s")
             valores.append(valor_admin)
+
+        #biografia
+        if biografia:
+            campos.append("biografia = %s")
+            valores.append(biografia)
 
         # foto
         if foto_arquivo and foto_arquivo.filename != '':
