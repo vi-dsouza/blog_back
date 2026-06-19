@@ -38,7 +38,7 @@ def postagens():
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            SELECT id_post, titulo, data, autor, hashtags, post_url, conteudo
+            SELECT id_post, titulo, data, autor, hashtags, post_url, conteudo, likes_count
             FROM postagens
             ORDER BY id_post DESC  -- Removemos o LIMIT 1
         """)
@@ -54,7 +54,8 @@ def postagens():
                 "autor": row[3],
                 "hashtags": row[4],
                 "post_url": post_url,
-                "conteudo": row[6]
+                "conteudo": row[6],
+                "likes_count": row[7]
             })
         return posts
     finally:
@@ -200,6 +201,72 @@ def contar_posts():
         cursor.execute("SELECT COUNT(*) FROM postagens")
         count = cursor.fetchone()[0]
         return count
+    finally:
+        cursor.close()
+        conn.close()
+
+# Mudar status de curtida (Toggle Like)
+import traceback  # <-- Importe isso no topo do arquivo para ver a linha exata do erro
+
+def alternar_curtida(id_post, action='like'):
+    # Print para acompanhar quando a função é chamada e com quais dados
+    print(f"\n[DEBUG] Iniciando alternar_curtida - ID: {id_post}, Ação: {action}")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # 1. Verifica se o post realmente existe antes de alterar
+        cursor.execute("SELECT id_post FROM postagens WHERE id_post = %s", (id_post,))
+        if not cursor.fetchone():
+            print(f"[DEBUG] Post {id_post} não foi encontrado no banco.")
+            return {"error": "Postagem não encontrada"}, 404
+
+        # 2. Executa o UPDATE dinâmico dependendo da ação vinda do Vue.js
+        if action == 'like':
+            print("[DEBUG] Executando query de LIKE...")
+            cursor.execute(
+                """
+                UPDATE postagens 
+                SET likes_count = likes_count + 1 
+                WHERE id_post = %s 
+                RETURNING likes_count
+                """, (id_post,)
+            )
+        elif action == 'unlike':
+            print("[DEBUG] Executando query de UNLIKE...")
+            cursor.execute(
+                """
+                UPDATE postagens 
+                SET likes_count = GREATEST(0, likes_count - 1) 
+                WHERE id_post = %s 
+                RETURNING likes_count
+                """, (id_post,)
+            )
+        else:
+            print(f"[DEBUG] Ação inválida recebida: {action}")
+            return {"error": "Ação inválida. Use 'like' ou 'unlike'."}, 400
+
+        # Pega a contagem atualizada do banco de dados
+        novo_total_likes = cursor.fetchone()[0]
+        conn.commit()
+        
+        print(f"[DEBUG] Sucesso! Novo total de likes: {novo_total_likes}")
+        return {"success": True, "likes_count": novo_total_likes}, 200
+
+    except Exception as e:
+        conn.rollback()
+        
+        # ====== AQUI ESTÁ O SEU CONSOLE DE ERROS ======
+        print("\n" + "="*50)
+        print("[ERRO CRÍTICO] Falha ao alternar curtida no PostgreSQL:")
+        print(f"Mensagem do erro: {e}")
+        print("-"*50)
+        traceback.print_exc()  # Mostra o caminho e a linha exata do erro no terminal
+        print("="*50 + "\n")
+        # =============================================
+        
+        return {"error": str(e)}, 500
     finally:
         cursor.close()
         conn.close()

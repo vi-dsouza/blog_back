@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 # Certifique-se de que os caminhos de importação estão corretos para o seu projeto
 from app.auth.routes import token_required 
-from app.services.posts_service import criar_posts, postagens, de_post, editar_post, contar_posts
+from app.services.posts_service import criar_posts, postagens, de_post, editar_post, contar_posts, alternar_curtida
 
 post_bp = Blueprint("post", __name__)
 
@@ -108,3 +108,11 @@ def atualizar_post(current_user_id, id_post):
 def qtd_posts(current_user_id):
     count = contar_posts()
     return jsonify(count)
+
+@post_bp.route("/curtir/<int:id_post>/like", methods=["POST"])
+def like_post(id_post):
+    data = request.get_json() or {}
+    action = data.get('action', 'like')
+
+    resultado, status = alternar_curtida(id_post, action)
+    return jsonify(resultado), status

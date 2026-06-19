@@ -2,7 +2,7 @@ import os
 import traceback
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from app.services.inscritos import inscrever, ativar_inscrito, descadastrar_inscrito
+from app.services.inscritos import inscrever, ativar_inscrito, descadastrar_inscrito, contar_inscritos
 
 insc_bp = Blueprint("insc", __name__)
 
@@ -85,3 +85,8 @@ def descadastrar():
     except Exception as e:
         print(f"Erro na rota de descadastro: {e}")
         return jsonify({"error": "Erro interno no servidor."}), 500
+    
+@insc_bp.route("/qtd_inscritos", methods=["GET"])
+def qtd_inscritos():
+    count = contar_inscritos()
+    return jsonify(count)

@@ -138,3 +138,15 @@ def descadastrar_inscrito(email):
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
+
+#contar inscritos
+def contar_inscritos():
+    conn = get_connection()
+    cursor = conn.cursor()
+    try: 
+        cursor.execute("SELECT COUNT(*) FROM inscritos WHERE status = 'ativo'")
+        count = cursor.fetchone()[0]
+        return count
+    finally:
+        cursor.close()
+        conn.close()
