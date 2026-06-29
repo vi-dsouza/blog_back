@@ -65,6 +65,27 @@ def lista_todos_admins():
 
     return administradores
 
+def lista_admin(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT id, email FROM usuarios WHERE email = %s
+        """, (email,))
+        
+        user = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        return user
+        
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        return None
+
 #lista autores
 def lista_autores():
     conn = get_connection()
