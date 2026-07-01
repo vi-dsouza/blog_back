@@ -33,7 +33,6 @@ def inscrever(nome, email, status, consentimento_lgpd, sobrenome=None):
 
         conn.commit()
 
-        #retorna o token para a rota saber qual link enviar por email
         return {
             "message": "Inscrição realizada com sucesso. Verifique seu e-mail.",
             "token": token
@@ -57,7 +56,6 @@ def ativar_inscrito(token):
         conn = get_connection()
         cursor = conn.cursor()
 
-        # 1. Procura se existe alguém com esse token e traz o status e a data de expiração
         cursor.execute("""
             SELECT id, status, token_expira_em 
             FROM inscritos 
@@ -71,8 +69,6 @@ def ativar_inscrito(token):
 
         inscrito_id, status_atual, token_expira_em = inscrito
 
-        # 2. Verifica se o token já expirou (Passaram-se as 24 horas?)
-        # Garante que a data atual esteja no mesmo fuso horário (UTC) da data do banco
         agora = datetime.now(timezone.utc)
         
         if token_expira_em and agora > token_expira_em:
@@ -81,7 +77,6 @@ def ativar_inscrito(token):
         if status_atual == "ativo":
             return {"message": "Sua inscrição já foi confirmada anteriormente!"}, 200
 
-        # 4. Se estiver tudo certo: Atualiza para ativo e LIMPA o token (Segurança!)
         cursor.execute("""
             UPDATE inscritos 
             SET status = 'ativo', 
@@ -139,7 +134,6 @@ def descadastrar_inscrito(email):
         if cursor: cursor.close()
         if conn: conn.close()
 
-#contar inscritos
 def contar_inscritos():
     conn = get_connection()
     cursor = conn.cursor()

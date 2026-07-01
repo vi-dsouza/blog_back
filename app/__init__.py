@@ -4,6 +4,7 @@ from app.auth.routes import auth_bp
 from app.auth.routes_config import blog_bp
 from app.auth.routes_posts import post_bp
 from app.auth.routes_inscritos import insc_bp
+from app.auth.dashboard import dashboard_bp
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 POSTS_FOLDER = os.path.join(os.getcwd(), 'posts_image')
@@ -16,6 +17,7 @@ def create_app():
     app.register_blueprint(blog_bp, url_prefix='/blog')
     app.register_blueprint(post_bp, url_prefix='/post')
     app.register_blueprint(insc_bp, url_prefix='/insc')
+    app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
 
     @app.route('/uploads/<filename>')
     def uploaded_file(filename):

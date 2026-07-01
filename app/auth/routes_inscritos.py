@@ -24,11 +24,8 @@ def inscricao():
             sobrenome=sobrenome
         )
 
-        #preparacao para o disparo de email
         if status == 201:
             token = response.get("token")
-
-            #monta o link que o usuario vai clicar no e-mail
             link_confirmacao = f"http://localhost:5000/confirmar?token={token}"
 
             #funcao temporaria que simula o envio de e-mail
@@ -69,11 +66,10 @@ def confirmar():
         print(f"Erro na rota de confirmação: {e}")
         return jsonify({"error": "Erro interno ao confirmar a inscrição."}), 500
     
-@insc_bp.route("/descadastrar", methods=["POST"])
+@insc_bp.route("/descadastrar", methods=["POST", "GET"])
 def descadastrar():
     try:
-        # Recebe o e-mail do corpo da requisição
-        email = request.form.get("email")
+        email = request.form.get("email") or request.args.get("email")
         
         if not email:
             return jsonify({"error": "O e-mail é obrigatório."}), 400
