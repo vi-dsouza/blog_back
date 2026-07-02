@@ -67,22 +67,49 @@ def notifica_inscritos(titulo, link_post):
         print("Aviso: Nenhum email encontrado no banco.")
         lista_destinatarios = ["entreideiasvs@gmail.com"]
 
-    html_email = gera_html_email(titulo, link_post, lista_destinatarios[0] if lista_destinatarios else None)
+    sucesso = True
 
-    try:
-        print(f"Enviando e-mail de teste para: {lista_destinatarios}...")
-        #email de teste de resend enquanto não tenho domínio
-        resposta = resend.Emails.send({
-            "from": "Entre Ideias <onboarding@resend.dev>",
-            "to": "entreideiasvs@gmail.com",
-            "subject": f"Teste de Post: {titulo}",
-            "html": html_email
-        })
+    # Percorre cada e-mail para gerar o link de descadastro correto
+    for email_unico in lista_destinatarios:
+        html_email = gera_html_email(titulo, link_post, email_unico)
 
-        print(f"Sucesso total! ID do envio: {resposta['id']}")
-        return True
-    except Exception as error:
-        print(f"/n[ERRO NO RESEND]: {error}")
-        print("Lembre-se: No modo de testes, o e-mail de destino PRECISA ser o mesmo da sua conta do Resend.\n")
-        return False
+        try:
+            print(f"Enviando e-mail individual para: {email_unico}...")
+            resend.Emails.send({
+                "from": "Entre Ideias <contato@entreideias.blog.br>",
+                "to": email_unico,
+                "subject": f"Novo Post: {titulo}",
+                "html": html_email
+            })
+        except Exception as error:
+            print(f"\n[ERRO NO RESEND ao enviar para {email_unico}]: {error}")
+            sucesso = False
+
+    return sucesso
+
+# def notifica_inscritos(titulo, link_post):
+#     lista_destinatarios = busca_leitores()
+
+#     if not lista_destinatarios:
+#         print("Aviso: Nenhum email encontrado no banco.")
+#         lista_destinatarios = ["entreideiasvs@gmail.com"]
+
+#     html_email = gera_html_email(titulo, link_post, lista_destinatarios[0] if lista_destinatarios else None)
+
+#     try:
+#         print(f"Enviando e-mail de teste para: {lista_destinatarios}...")
+#         #email de teste de resend enquanto não tenho domínio
+#         resposta = resend.Emails.send({
+#             "from": "Entre Ideias <contato@entreideias.blog.br>",
+#             "to": lista_destinatarios,
+#             "subject": f"Teste de Post: {titulo}",
+#             "html": html_email
+#         })
+
+#         print(f"Sucesso total! ID do envio: {resposta['id']}")
+#         return True
+#     except Exception as error:
+#         print(f"/n[ERRO NO RESEND]: {error}")
+#         print("Lembre-se: No modo de testes, o e-mail de destino PRECISA ser o mesmo da sua conta do Resend.\n")
+#         return False
     
