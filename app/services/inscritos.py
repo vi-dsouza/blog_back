@@ -106,33 +106,33 @@ def descadastrar_inscrito(email):
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id, status FROM inscritos WHERE email = %s", (email,))
+        cursor.execute("SELECT id FROM inscritos WHERE email = %s", (email,))
         resultado = cursor.fetchone()
 
         if not resultado:
             return {"error": "E-mail não encontrado na nossa lista."}, 404
 
-        inscrito_id, status_atual = resultado
+        inscrito_id = resultado[0]
 
-        if status_atual == "cancelado":
-            return {"message": "Este e-mail já foi removido da lista anteriormente."}, 200
-
-        cursor.execute("""
-            UPDATE inscritos 
-            SET status = 'cancelado', atualizado_em = NOW() 
-            WHERE id = %s
-        """, (inscrito_id,))
+        cursor.execute(
+            "DELETE FROM inscritos WHERE id = %s",
+            (inscrito_id,)
+        )
 
         conn.commit()
-        return {"message": "Sua inscrição foi cancelada com sucesso."}, 200
+        return {"message": "Sua inscrição foi removida com sucesso."}, 200
 
     except Exception as e:
-        if conn: conn.rollback()
-        print(f"Erro ao descadastrar: {e}")
+        if conn:
+            conn.rollback()
+        print(f"Erro ao remover inscrito: {e}")
         return {"error": "Erro interno ao processar o cancelamento."}, 500
+
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 def contar_inscritos():
     conn = get_connection()

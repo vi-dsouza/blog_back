@@ -27,7 +27,7 @@ def busca_leitores():
     
 def gera_html_email(titulo, link_post, email_destino=None):
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    unsubscribe_url = f"{frontend_url.rstrip('/')}/desinscrever"
+    unsubscribe_url = f"{frontend_url.rstrip('/')}/descadastrar"
 
     if email_destino:
         unsubscribe_url = f"{unsubscribe_url}?email={quote(email_destino)}"
