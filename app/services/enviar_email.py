@@ -4,7 +4,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 def enviar_email_recuperacao(email_destino, link_redefinicao):
-    # 1. Carrega as configurações do .env
     smtp_server = os.getenv("SMTP_SERVER")
     smtp_port = int(os.getenv("SMTP_PORT", 587))
     smtp_user = os.getenv("SMTP_USER")
@@ -36,7 +35,6 @@ def enviar_email_recuperacao(email_destino, link_redefinicao):
     </html>
     """
     
-    # Adiciona o HTML ao e-mail
     msg.attach(MIMEText(corpo_html, 'html'))
 
     try:

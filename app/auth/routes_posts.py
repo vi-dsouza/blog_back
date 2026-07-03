@@ -27,7 +27,6 @@ def criar_post(current_user_id):
 
         data_final = data_str[:10] if data_str else datetime.now().strftime('%Y-%m-%d')
 
-        # 3. Lógica Robusta de Salvamento de Imagem
         post_file = request.files.get("post") 
         post_url_banco = None
 
@@ -58,7 +57,6 @@ def criar_post(current_user_id):
             hashtags, conteudo, post_url_banco
         )
 
-        # 5. Notificação dos Inscritos
         if status in [200, 201]:
             print("✉️ Enviando notificações para os inscritos...", file=sys.stderr)
 
@@ -82,7 +80,6 @@ def criar_post(current_user_id):
         return jsonify({"error": str(e)}), 500
     
 @post_bp.route("/postagens", methods=["GET"])
-# @token_required
 def buscar_posts():
     try:
         posts = postagens()

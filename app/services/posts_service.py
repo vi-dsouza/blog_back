@@ -13,11 +13,14 @@ def buscar_post_por_id(id_post):
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        sql = """
             SELECT id_post, titulo, data, autor, hashtags, post_url, conteudo, likes_count
             FROM postagens
             WHERE id_post = %s
-        """, (id_post,))
+        """
+        valores = (id_post,)
+        cursor.execute(sql, valores)
+
         row = cursor.fetchone()
 
         if not row:
@@ -44,21 +47,28 @@ def criar_posts(titulo, data, autor, hashtags, conteudo, post_url=None):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id_post FROM postagens WHERE titulo = %s", (titulo,))
+    sql = """
+        SELECT id_post FROM postagens WHERE titulo = %s
+    """
+    valores = (titulo,)
+
+    cursor.execute(sql, valores)
 
     if cursor.fetchone():
         cursor.close()
         conn.close()
 
         return {"error": "Já existe um post com esse titulo!"}, 400
-
-    cursor.execute(
-        """
-            INSERT INTO postagens (titulo, data, autor, hashtags, conteudo, post_url)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id_post
-        """, (titulo, data, autor, hashtags, conteudo, post_url))
     
+    sql = """
+        INSERT INTO postagens (titulo, data, autor, hashtags, conteudo, post_url)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        RETURNING id_post    
+    """
+    valores = (titulo, data, autor, hashtags, conteudo, post_url)
+    
+    cursor.execute(sql, valores)
+
     post_id = cursor.fetchone()[0]
 
     conn.commit()
@@ -72,12 +82,15 @@ def postagens():
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
+        sql = """
             SELECT id_post, titulo, data, autor, hashtags, post_url, conteudo, likes_count
             FROM postagens
-            ORDER BY id_post DESC  -- Removemos o LIMIT 1
-        """)
-        rows = cursor.fetchall() # Usamos fetchall() para pegar a lista toda
+            ORDER BY id_post DESC
+        """
+
+        cursor.execute(sql)
+
+        rows = cursor.fetchall()
         
         posts = []
         for row in rows:
@@ -103,7 +116,13 @@ def de_post(id_post):
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id_post FROM postagens WHERE id_post = %s", (id_post,))
+        sql = """
+            SELECT id_post FROM postagens WHERE id_post = %s
+        """
+        valores = (id_post,)
+
+        cursor.execute(sql, valores)
+
         post = cursor.fetchone()
 
         if not post:
@@ -111,7 +130,12 @@ def de_post(id_post):
             conn.close()
             return {"error": "Postagem não encontrada"}, 404
 
-        cursor.execute("DELETE FROM postagens WHERE id_post = %s", (id_post,))
+        sql = """
+            DELETE FROM postagens WHERE id_post = %s
+        """
+        valores = (id_post,)
+
+        cursor.execute(sql, valores)
 
         conn.commit()
         cursor.close()
@@ -127,54 +151,38 @@ def editar_post(id_post):
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            "SELECT id_post, post_url FROM postagens WHERE id_post = %s",
-            (id_post,)
-        )
+        sql = """
+            SELECT id_post, post_url, titulo, autor, hashtags, conteudo, data
+            FROM postagens
+            WHERE id_post = %s
+        """
+        valores = (id_post,)
+
+        cursor.execute(sql, valores)
+
         post_atual = cursor.fetchone()
 
         if not post_atual:
             return {"error": "Postagem não encontrada"}, 404
 
-        titulo = request.form.get('titulo')
-        autor = request.form.get('autor')
-        hashtags = request.form.get('hashtags')
-        conteudo = request.form.get('conteudo')
-        data = request.form.get('data')
+        foto_antiga_url = post_atual[1]
+        titulo_atual = post_atual[2]
+        autor_atual = post_atual[3]
+        hashtags_atual = post_atual[4]
+        conteudo_atual = post_atual[5]
+        data_atual = post_atual[6]
+
+        titulo = request.form.get('titulo') or titulo_atual
+        autor = request.form.get('autor') or autor_atual
+        hashtags = request.form.get('hashtags') or hashtags_atual
+        conteudo = request.form.get('conteudo') or conteudo_atual
+        data = request.form.get('data') or data_atual
         
         foto_arquivo = request.files.get('post')
 
-        campos = []
-        valores = []
-
-        # Título
-        if titulo:
-            campos.append("titulo = %s")
-            valores.append(titulo)
-
-        # Autor
-        if autor:
-            campos.append("autor = %s")
-            valores.append(autor)
-
-        # Hashtags
-        if hashtags:
-            campos.append("hashtags = %s")
-            valores.append(hashtags)
-
-        # Conteúdo
-        if conteudo:
-            campos.append("conteudo = %s")
-            valores.append(conteudo)
-
-        # Data
-        if data:
-            campos.append("data = %s")
-            valores.append(data)
-
         if foto_arquivo and foto_arquivo.filename != '':
-            if post_atual[1]:
-                caminho_antigo = os.path.join(UPLOAD_FOLDER, post_atual[1])
+            if foto_antiga_url:
+                caminho_antigo = os.path.join(UPLOAD_FOLDER, foto_antiga_url)
                 if os.path.exists(caminho_antigo):
                     os.remove(caminho_antigo)
 
@@ -182,27 +190,27 @@ def editar_post(id_post):
             caminho_novo = os.path.join(UPLOAD_FOLDER, filename)
             
             foto_arquivo.save(caminho_novo)
+            foto_url = filename
+        else:
+            foto_url = foto_antiga_url
 
-            campos.append("post_url = %s")
-            valores.append(filename)
-
-        if not campos:
-            return {"message": "Nenhum dado enviado para atualizar"}, 400
-
-        valores.append(id_post)
-
-        # Monta o SQL dinâmico
-        sql = f"""
+        sql = """
             UPDATE postagens
-            SET {', '.join(campos)}
+            SET titulo = %s,
+                autor = %s,
+                hashtags = %s,
+                conteudo = %s,
+                data = %s,
+                post_url = %s
             WHERE id_post = %s
         """
+        valores = (titulo, autor, hashtags, conteudo, data, foto_url, id_post)
 
-        cursor.execute(sql, tuple(valores))
+        cursor.execute(sql, valores)
         conn.commit()
 
         return {
-            "message": "Postagem atualizada com sucesso"
+            "message": "Postagem updated com sucesso"
         }, 200
 
     except Exception as e:
@@ -218,7 +226,12 @@ def contar_posts():
     conn = get_connection()
     cursor = conn.cursor()
     try: 
-        cursor.execute("SELECT COUNT(*) FROM postagens")
+        sql = """
+            SELECT COUNT(*) FROM postagens
+        """
+
+        cursor.execute(sql)
+
         count = cursor.fetchone()[0]
         return count
     finally:
@@ -233,32 +246,43 @@ def alternar_curtida(id_post, action='like'):
     conn = get_connection()
     cursor = conn.cursor()
 
-    try:
-        cursor.execute("SELECT id_post FROM postagens WHERE id_post = %s", (id_post,))
+    try:        
+        sql = """
+            SELECT id_post FROM postagens WHERE id_post = %s
+        """
+        valores = (id_post,)
+
+        cursor.execute(sql, valores)
+        
         if not cursor.fetchone():
             print(f"[DEBUG] Post {id_post} não foi encontrado no banco.")
             return {"error": "Postagem não encontrada"}, 404
 
         if action == 'like':
             print("[DEBUG] Executando query de LIKE...")
-            cursor.execute(
-                """
-                UPDATE postagens 
-                SET likes_count = likes_count + 1 
-                WHERE id_post = %s 
+
+            sql = """
+                UPDATE postagens
+                SET likes_count = likes_count + 1
+                WHERE id_post = %s
                 RETURNING likes_count
-                """, (id_post,)
-            )
+            """
+            valores = (id_post,)
+
+            cursor.execute(sql, valores)
+
         elif action == 'unlike':
             print("[DEBUG] Executando query de UNLIKE...")
-            cursor.execute(
-                """
-                UPDATE postagens 
-                SET likes_count = GREATEST(0, likes_count - 1) 
-                WHERE id_post = %s 
+            
+            sql = """
+                UPDATE postagens
+                SET likes_count = GREATEST(0, likes_count - 1)
+                WHERE id_post = %s
                 RETURNING likes_count
-                """, (id_post,)
-            )
+            """
+            valores = (id_post,)
+
+            cursor.execute(sql, valores)
         else:
             print(f"[DEBUG] Ação inválida recebida: {action}")
             return {"error": "Ação inválida. Use 'like' ou 'unlike'."}, 400

@@ -29,7 +29,6 @@ def obter_visao_geral_resend():
         total_abertos = 0
         total_clicados = 0
         
-        # contagem correta baseada no 'last_event' do Resend
         for email in lista_emails:
             evento = email.get("last_event")
             

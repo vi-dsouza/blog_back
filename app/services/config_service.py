@@ -10,13 +10,14 @@ def configurar(nome_blog, data_atualizacao, autor, tags_do_blog, descricao_blog,
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
+    sql = """
         INSERT INTO config_geral (nome_blog, data_atualizacao, autor, tags_do_blog, descricao_blog, banner_url)
         VALUES (%s, %s, %s, %s, %s, %s)
         RETURNING id_config;
-        """, (nome_blog, data_atualizacao, autor, tags_do_blog, descricao_blog, banner_url)
-    )
+    """
+    valores = (nome_blog, data_atualizacao, autor, tags_do_blog, descricao_blog, banner_url)
+
+    cursor.execute(sql, valores)
 
     config_id = cursor.fetchone()[0]
     
@@ -30,13 +31,14 @@ def obter_ultima_configuracao():
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Busca a última configuração salva
-        cursor.execute("""
+        sql = """
             SELECT nome_blog, data_atualizacao, autor, tags_do_blog, descricao_blog, banner_url 
-            FROM config_geral 
-            ORDER BY id_config DESC 
+            FROM config_geral
+            ORDER BY id_config DESC
             LIMIT 1
-        """)
+        """
+        cursor.execute(sql)
+
         row = cursor.fetchone()
         
         if row:

@@ -16,7 +16,12 @@ def inscrever(nome, email, status, consentimento_lgpd, sobrenome=None):
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id FROM inscritos WHERE email = %s", (email,))
+        sql = """
+            SELECT id FROM inscritos WHERE email = %s
+        """
+        valores = (email,)
+        cursor.execute(sql, valores)
+
         if cursor.fetchone():
             cursor.close()
             conn.close()
@@ -26,11 +31,13 @@ def inscrever(nome, email, status, consentimento_lgpd, sobrenome=None):
         token = secrets.token_urlsafe(32)
         expiracao = datetime.now(timezone.utc) + timedelta(hours=24)
 
-        cursor.execute("""
+        sql = """
             INSERT INTO inscritos (nome, email, status, consentimento_lgpd, token_confirmacao, token_expira_em)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (nome, email, status, consentimento_lgpd, token, expiracao))
+        """
+        valores = (nome, email, status, consentimento_lgpd, token, expiracao)
 
+        cursor.execute(sql, valores)
         conn.commit()
 
         return {
@@ -55,13 +62,15 @@ def ativar_inscrito(token):
     try:
         conn = get_connection()
         cursor = conn.cursor()
-
-        cursor.execute("""
-            SELECT id, status, token_expira_em 
-            FROM inscritos 
-            WHERE token_confirmacao = %s
-        """, (token,))
         
+        sql = """
+            SELECT id, status, token_expira_em 
+            FROM inscritos
+            WHERE token_confirmacao = %s
+        """ 
+        valores = (token,)
+
+        cursor.execute(sql, valores)
         inscrito = cursor.fetchone()
 
         if not inscrito:
@@ -70,6 +79,10 @@ def ativar_inscrito(token):
         inscrito_id, status_atual, token_expira_em = inscrito
 
         agora = datetime.now(timezone.utc)
+
+        # Garante que o token_expira_em tenha fuso horário associado antes de comparar
+        if token_expira_em and token_expira_em.tzinfo is None:
+            token_expira_em = token_expira_em.replace(tzinfo=timezone.utc)
         
         if token_expira_em and agora > token_expira_em:
             return {"error": "Este link de confirmação expirou. Faça o cadastro novamente."}, 400
@@ -77,14 +90,16 @@ def ativar_inscrito(token):
         if status_atual == "ativo":
             return {"message": "Sua inscrição já foi confirmada anteriormente!"}, 200
 
-        cursor.execute("""
-            UPDATE inscritos 
+        sql = """
+            UPDATE inscritos
             SET status = 'ativo', 
                 token_confirmacao = NULL, 
                 token_expira_em = NULL 
             WHERE id = %s
-        """, (inscrito_id,))
+        """
+        valores = (inscrito_id,)
 
+        cursor.execute(sql, valores)
         conn.commit()
         return {"message": "E-mail confirmado com sucesso! Inscrição ativada."}, 200
 
@@ -106,7 +121,12 @@ def descadastrar_inscrito(email):
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id FROM inscritos WHERE email = %s", (email,))
+        sql = """
+            SELECT id FROM inscritos WHERE email = %s
+        """
+        valores = (email,)
+
+        cursor.execute(sql, valores)
         resultado = cursor.fetchone()
 
         if not resultado:
@@ -114,11 +134,12 @@ def descadastrar_inscrito(email):
 
         inscrito_id = resultado[0]
 
-        cursor.execute(
-            "DELETE FROM inscritos WHERE id = %s",
-            (inscrito_id,)
-        )
+        sql = """
+            DELETE FROM inscritos WHERE id = %s
+        """
+        valores = (inscrito_id,)
 
+        cursor.execute(sql, valores)
         conn.commit()
         return {"message": "Sua inscrição foi removida com sucesso."}, 200
 
@@ -138,7 +159,11 @@ def contar_inscritos():
     conn = get_connection()
     cursor = conn.cursor()
     try: 
-        cursor.execute("SELECT COUNT(*) FROM inscritos WHERE status = 'ativo'")
+        sql = """
+            SELECT COUNT(*) FROM inscritos WHERE status = 'ativo'
+        """
+
+        cursor.execute(sql)
         count = cursor.fetchone()[0]
         return count
     finally:
