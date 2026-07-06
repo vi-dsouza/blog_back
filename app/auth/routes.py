@@ -3,6 +3,7 @@ import jwt
 import datetime
 import bcrypt
 from functools import wraps
+from threading import Lock
 from flask import Blueprint, request, jsonify
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
@@ -16,6 +17,46 @@ load_dotenv()
 auth_bp = Blueprint("auth", __name__)
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 SECRET_KEY = os.getenv("SECRET_KEY")
+MAX_FAILED_ATTEMPTS = int(os.getenv("MAX_FAILED_ATTEMPTS", "3"))
+LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "60"))
+failed_login_attempts = {}
+failed_login_lock = Lock()
+
+
+def _get_login_attempt_key(email):
+    normalized_email = (email or "").strip().lower()
+    return (normalized_email, request.remote_addr or "unknown")
+
+
+def _get_failed_login_state(key):
+    with failed_login_lock:
+        now = datetime.datetime.utcnow()
+        state = failed_login_attempts.get(key)
+        if state and state.get("blocked_until") and state["blocked_until"] <= now:
+            failed_login_attempts.pop(key, None)
+            return None
+        return state
+
+
+def _register_failed_login(key):
+    with failed_login_lock:
+        now = datetime.datetime.utcnow()
+        state = failed_login_attempts.get(key)
+        if not state:
+            state = {"count": 0, "blocked_until": None}
+
+        state["count"] += 1
+        if state["count"] >= MAX_FAILED_ATTEMPTS:
+            state["blocked_until"] = now + datetime.timedelta(seconds=LOCKOUT_SECONDS)
+
+        failed_login_attempts[key] = state
+        return state
+
+
+def _clear_failed_login(key):
+    with failed_login_lock:
+        failed_login_attempts.pop(key, None)
+
 
 def token_required(f):
     @wraps(f)
@@ -45,10 +86,20 @@ def login():
 
     data = request.get_json(silent=True) or {}
     email = data.get("email")
-    senha_digitada = data.get("senha") 
+    senha_digitada = data.get("senha")
 
     if not email or not senha_digitada:
         return jsonify({"error": "E-mail e senha são obrigatórios"}), 400
+
+    attempt_key = _get_login_attempt_key(email)
+    failed_state = _get_failed_login_state(attempt_key)
+    
+    # 1. Verifica se já está bloqueado
+    if failed_state and failed_state.get("blocked_until") and failed_state["blocked_until"] > datetime.datetime.utcnow():
+        remaining_seconds = max(1, int((failed_state["blocked_until"] - datetime.datetime.utcnow()).total_seconds()))
+        return jsonify({
+            "error": f"Muitas tentativas incorretas. Tente novamente em {remaining_seconds} segundos."
+        }), 403
 
     try:
         conn = get_connection()
@@ -58,32 +109,55 @@ def login():
         cursor.close()
         conn.close()
 
+        autenticado = False
+        user_id, nome_usuario, foto_usuario = None, None, None
+
         if user:
             user_id, hashed_password, nome_usuario, foto_usuario = user
-            
             senha_bytes = senha_digitada.encode('utf-8')
             hash_bytes = hashed_password if isinstance(hashed_password, bytes) else hashed_password.encode('utf-8')
-
-            if bcrypt.checkpw(senha_bytes, hash_bytes):
-                payload = {
-                    "user_id": user_id,
-                    "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
-                }
             
-                token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+            # Verifica a senha real
+            if bcrypt.checkpw(senha_bytes, hash_bytes):
+                autenticado = True
+        else:
+            # Isso impede o timing attack sem estourar erro no Python
+            hash_falso = b'$2b$12$Lg9k2M1V8m7S8g9K01234Oeb2vG9FkRzQWxzNl9o2vG9FkRzQWxzN'
+            bcrypt.checkpw(senha_digitada.encode('utf-8'), hash_falso)
+            autenticado = False
 
-                if isinstance(token, bytes):
-                    token = token.decode('utf-8')
-                
-                return jsonify({
-                    "message": "Login realizado com sucesso",
-                    "token": token,
-                    "user_id": user_id,
-                    "user_nome": nome_usuario,
-                    "user_foto": foto_usuario
-                }), 200
+        if autenticado:
+            # Sucesso: limpa as falhas e gera o token
+            _clear_failed_login(attempt_key)
+
+            payload = {
+                "user_id": user_id,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            }
+            token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
+
+            return jsonify({
+                "message": "Login realizado com sucesso",
+                "token": token,
+                "user_id": user_id,
+                "user_nome": nome_usuario,
+                "user_foto": foto_usuario
+            }), 200
+
+        # Se chegou aqui, falhou (seja por senha errada ou usuário inexistente)
+        failed_state = _register_failed_login(attempt_key)
         
+        if failed_state["count"] >= MAX_FAILED_ATTEMPTS:
+            return jsonify({
+                # Texto alterado para segundos para o front ler perfeitamente os 60s
+                "error": f"Conta temporariamente bloqueada por {LOCKOUT_SECONDS} segundos após várias tentativas incorretas."
+            }), 403
+
+        # Mensagem genérica para não dar pistas ao atacante
         return jsonify({"error": "E-mail ou senha incorretos"}), 401
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
