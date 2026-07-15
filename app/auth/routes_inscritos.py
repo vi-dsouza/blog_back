@@ -6,8 +6,12 @@ from app.services.inscritos import inscrever, ativar_inscrito, descadastrar_insc
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 
 insc_bp = Blueprint("insc", __name__)
+
+load_dotenv()
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 def enviar_email_confirmacao(email_destino, nome_usuario, link_confirmacao):
     smtp_server = os.environ.get("SMTP_SERVER")
@@ -81,7 +85,7 @@ def inscricao():
 
         if status == 201:
             token = response.get("token")
-            link_confirmacao = f"http://localhost:3000/confirmar?token={token}"
+            link_confirmacao = f"{FRONTEND_URL}/confirmar?token={token}"
 
             enviar_email_confirmacao(email, nome, link_confirmacao)
 

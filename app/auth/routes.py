@@ -19,6 +19,7 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 SECRET_KEY = os.getenv("SECRET_KEY")
 MAX_FAILED_ATTEMPTS = int(os.getenv("MAX_FAILED_ATTEMPTS", "3"))
 LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "60"))
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 failed_login_attempts = {}
 failed_login_lock = Lock()
 
@@ -192,7 +193,7 @@ def esqueci_senha():
         if isinstance(token, bytes):
             token = token.decode('utf-8')
 
-        link_redefinicao = f"http://localhost:3000/admin/redefinir-senha?token={token}"
+        link_redefinicao = f"{FRONTEND_URL}/admin/redefinir-senha?token={token}"
         print(f"[LOG] Token gerado com sucesso. Link: {link_redefinicao}")
         
         # Envia o e-mail

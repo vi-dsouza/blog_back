@@ -310,3 +310,34 @@ def alternar_curtida(id_post, action='like'):
         cursor.close()
         conn.close()
 
+def salvar_imagem_interna():
+    """
+    Recebe uma imagem avulsa vinda do editor de texto, salva no servidor
+    e retorna a URL pública necessária para o Quill renderizar.
+    """
+    try:
+        foto_arquivo = request.files.get('image')
+
+        if not foto_arquivo or foto_arquivo.filename == '':
+            return {"error": "Nenhum arquivo enviado"}, 400
+        
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+
+        filename = f"{uuid.uuid4()}_{secure_filename(foto_arquivo.filename)}"
+        caminho_salvamento = os.path.join(UPLOAD_FOLDER, filename)
+
+        foto_arquivo.save(caminho_salvamento)
+
+        url_publica = f"{request.host_url}posts_image/{filename}"
+
+        return {"url": url_publica}, 201
+
+    except Exception as e:
+        print("\n" + "="*50)
+        print("[ERRO NO UPLOAD DE IMAGEM INTERNA]:")
+        print(f"Mensagem do erro: {e}")
+        print("-"*50)
+        traceback.print_exc()
+        print("="*50 + "\n")
+        return {"error": str(e)}, 500

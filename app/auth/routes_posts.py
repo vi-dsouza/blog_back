@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 from app.auth.routes import token_required 
-from app.services.posts_service import criar_posts, postagens, de_post, editar_post, contar_posts, alternar_curtida, buscar_post_por_id
+from app.services.posts_service import criar_posts, postagens, de_post, editar_post, contar_posts, alternar_curtida, buscar_post_por_id, salvar_imagem_interna
 from app.services.email_novos_posts import notifica_inscritos
 
 post_bp = Blueprint("post", __name__)
@@ -124,3 +124,8 @@ def like_post(id_post):
     resultado, status = alternar_curtida(id_post, action)
     return jsonify(resultado), status
 
+@post_bp.route("/upload", methods=["POST"])
+@token_required
+def upload_imagem_editor(current_user_id):
+    resultado, status = salvar_imagem_interna()
+    return jsonify(resultado), status
