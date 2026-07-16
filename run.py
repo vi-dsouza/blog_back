@@ -9,7 +9,15 @@ app = create_app()
 
 CORS(
     app,
-    resources={r"/*": {"origins": ["https://www.entreideias.blog.br/"]}},
+    resources={
+        r"/*": {
+            "origins": [
+                "http://localhost:3000",                  
+                "https://www.entreideias.blog.br",       
+                "https://entreideias.blog.br"            
+            ]
+        }
+    },
     supports_credentials=True
 )
 
