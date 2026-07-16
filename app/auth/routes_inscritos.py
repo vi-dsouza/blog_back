@@ -49,9 +49,9 @@ def enviar_email_confirmacao(email_destino, nome_usuario, link_confirmacao):
     try:
         port = int(smtp_port)
         if port == 465:
-            server = smtplib.SMTP_SSL(smtp_server, port)
+            server = smtplib.SMTP_SSL(smtp_server, port, timeout=10)
         else:
-            server = smtplib.SMTP(smtp_server, port)
+            server = smtplib.SMTP(smtp_server, port, timeout=10)
             server.starttls() 
 
         server.login(smtp_user, smtp_password)
