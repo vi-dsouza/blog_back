@@ -43,7 +43,7 @@ def enviar_email_confirmacao(email_destino, nome_usuario, link_confirmacao):
 
     try:
         resend.Emails.send({
-            "from": "onboarding@resend.dev",
+            "from": "Entre Ideias <contato@entreideias.blog.br>",
             "to": email_destino,
             "subject": "Confirme sua inscrição - Newsletter Entre Ideias",
             "html": corpo_html
