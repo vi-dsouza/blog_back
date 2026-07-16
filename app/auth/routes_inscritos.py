@@ -2,6 +2,7 @@ import os
 import traceback
 from datetime import datetime
 from flask import Blueprint, request, jsonify
+import resend
 from app.services.inscritos import inscrever, ativar_inscrito, descadastrar_inscrito, contar_inscritos
 import smtplib
 from email.mime.text import MIMEText
@@ -14,55 +15,45 @@ load_dotenv()
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 def enviar_email_confirmacao(email_destino, nome_usuario, link_confirmacao):
-    smtp_server = os.environ.get("SMTP_SERVER")
-    smtp_port = os.environ.get("SMTP_PORT", 587)
-    smtp_user = os.environ.get("SMTP_USER")
-    smtp_password = os.environ.get("SMTP_PASSWORD")
+    resend.api_key = os.getenv("RESEND_API_KEY")
 
-    if not all([smtp_server, smtp_user, smtp_password]):
-        print("❌ Erro: Configurações de SMTP incompletas no arquivo .env")
+    if not resend.api_key:
+        print("❌ Erro: Chave de API do Resend (RESEND_API_KEY) não configurada.")
         return False
-
-    msg = MIMEMultipart()
-    msg['From'] = smtp_user
-    msg['To'] = email_destino
-    msg['Subject'] = "Confirme sua inscrição - Newsletter Entre Ideias"
 
     corpo_html = f"""
     <html>
-        <body>
-            <h2>Olá, {nome_usuario}!</h2>
-            <p>Obrigado por se inscrever na Newsletter Entre Ideias.</p>
-            <p>Para ativar sua inscrição, clique no botão ou no link seguro abaixo:</p>
-            <p>
-                <a href="{link_confirmacao}" style="background-color: #7B5CFF; color: white; padding: 10px 20px; text-decoration: none; display: inline-block; border-radius: 5px;">
-                    Confirmar Minha Inscrição
-                </a>
-            </p>
-            <p style="font-size: 11px; color: #555;">Se o botão não funcionar, copie e cole este link no seu navegador:<br>{link_confirmacao}</p>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #7B5CFF;">Olá, {nome_usuario}!</h2>
+                <p>Obrigado por se inscrever na Newsletter Entre Ideias.</p>
+                <p>Para ativar sua inscrição e começar a receber nossos conteúdos, clique no botão seguro abaixo:</p>
+                <p style="text-align: center; margin: 30px 0;">
+                    <a href="{link_confirmacao}" style="background-color: #7B5CFF; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; display: inline-block; border-radius: 6px;">
+                        Confirmar Minha Inscrição
+                    </a>
+                </p>
+                <p style="font-size: 11px; color: #666;">Se o botão acima não funcionar, copie e cole este link no seu navegador:<br>{link_confirmacao}</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 11px; color: #999; text-align: center;">Entre Ideias © 2026</p>
+            </div>
         </body>
     </html>
     """
-    
-    msg.attach(MIMEText(corpo_html, 'html'))
 
     try:
-        port = int(smtp_port)
-        if port == 465:
-            server = smtplib.SMTP_SSL(smtp_server, port, timeout=10)
-        else:
-            server = smtplib.SMTP(smtp_server, port, timeout=10)
-            server.starttls() 
-
-        server.login(smtp_user, smtp_password)
-        server.sendmail(smtp_user, email_destino, msg.as_string())
-        server.quit()
+        resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": email_destino,
+            "subject": "Confirme sua inscrição - Newsletter Entre Ideias",
+            "html": corpo_html
+        })
         
-        print(f"✅ E-mail de confirmação enviado com sucesso para: {email_destino}")
+        print(f"✅ E-mail de confirmação enviado via Resend para: {email_destino}")
         return True
 
     except Exception as e:
-        print(f"❌ Erro ao enviar e-mail via SMTP: {e}")
+        print(f"❌ Erro ao enviar e-mail via Resend: {e}")
         return False
 
 @insc_bp.route("/inscrever", methods=["POST"])
