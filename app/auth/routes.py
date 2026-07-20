@@ -11,6 +11,7 @@ import traceback
 from app.database import get_connection
 from app.services.auth_service import criar_usuario, lista_todos_admins, del_admin, up_admin, lista_autores, lista_admin
 from app.services.enviar_email import enviar_email_recuperacao
+import base64
 
 load_dotenv()
 
@@ -289,24 +290,32 @@ def register(current_user_id):
             missing_fields.append("biografia")
 
         if missing_fields:
-            return jsonify({
-                "error": "Campos obrigatórios faltando",
-                "missing_fields": missing_fields
-            }), 400
-        
-        foto_url = None
-        if foto and foto.filename != '':
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-            filename = secure_filename(foto.filename)
-            
-            filename = f"{datetime.now().timestamp()}_{filename}"
-            
-            caminho = os.path.join(UPLOAD_FOLDER, filename)
-            foto.save(caminho)
-            foto_url = filename
-            print(f"✅ Foto do autor salva em: {caminho}")
+            return (
+                jsonify(
+                    {
+                        "error": "Campos obrigatórios faltando",
+                        "missing_fields": missing_fields,
+                    }
+                ),
+                400,
+            )
 
-        response, status = criar_usuario(nome, email, senha, biografia, is_admin=is_admin, foto_url=foto_url)
+        foto_url = None
+        if foto and foto.filename != "":
+            conteudo_bytes = foto.read()
+            encoded_string = base64.b64encode(conteudo_bytes).decode("utf-8")
+            mime_type = foto.content_type or "image/jpeg"
+
+            foto_url = f"data:{mime_type};base64,{encoded_string}"
+
+        response, status = criar_usuario(
+            nome,
+            email,
+            senha,
+            biografia,
+            is_admin=is_admin,
+            foto_url=foto_url,
+        )
         return jsonify(response), status
     except Exception as e:
         return jsonify({"error": str(e)}), 500

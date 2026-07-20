@@ -59,7 +59,8 @@ def lista_todos_admins():
     administradores = []
 
     for admin in resultados:
-        foto_url = f"{request.host_url}uploads/{admin[5]}" if admin[5] else None
+        # foto_url = f"{request.host_url}uploads/{admin[5]}" if admin[5] else None
+        foto_url = admin[5] if admin[5] else None
 
         administradores.append({ 
             "id": admin[0],
@@ -111,7 +112,8 @@ def lista_autores():
     info_autores = []
 
     for autor in resultado:
-        foto_url = f"{request.host_url}uploads/{autor[2]}" if autor[2] else None
+        # foto_url = f"{request.host_url}uploads/{autor[2]}" if autor[2] else None
+        foto_url = autor[2] if autor[2] else None
 
         info_autores.append({
             "nome": autor[0],
@@ -174,50 +176,42 @@ def up_admin(id):
         if not admin_atual:
             return {"error": "Administrador não encontrado"}, 404
 
-        foto_antiga_url = admin_atual[1]
+        # foto_antiga_url = admin_atual[1]
+        foto_antiga_base64 = admin_atual[1]
         nome_atual = admin_atual[2]
         email_atual = admin_atual[3]
         senha_hash_atual = admin_atual[4]
         is_admin_atual = admin_atual[5]
         biografia_atual = admin_atual[6]
 
-        nome = request.form.get('nome') or nome_atual
-        email = request.form.get('email') or email_atual
-        biografia = request.form.get('biografia') or biografia_atual
+        nome = request.form.get("nome") or nome_atual
+        email = request.form.get("email") or email_atual
+        biografia = request.form.get("biografia") or biografia_atual
 
-        senha = request.form.get('senha')
+        senha = request.form.get("senha")
         if senha:
             senha_hash = bcrypt.hashpw(
-                senha.encode('utf-8'),
-                bcrypt.gensalt()
-            ).decode('utf-8')
+                senha.encode("utf-8"), bcrypt.gensalt()
+            ).decode("utf-8")
         else:
             senha_hash = senha_hash_atual
 
-        is_admin_raw = request.form.get('is_admin')
+        is_admin_raw = request.form.get("is_admin")
         if is_admin_raw is not None:
-            is_admin = is_admin_raw in ['1', 'true', 'True']
+            is_admin = is_admin_raw in ["1", "true", "True"]
         else:
             is_admin = is_admin_atual
 
-        foto_arquivo = request.files.get('foto')
-        
-        if foto_arquivo and foto_arquivo.filename != '':
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-            if foto_antiga_url:
-                caminho_antigo = os.path.join(UPLOAD_FOLDER, foto_antiga_url)
-                if os.path.exists(caminho_antigo):
-                    os.remove(caminho_antigo)
+        foto_arquivo = request.files.get("foto")
 
-            filename = f"{uuid.uuid4()}_{secure_filename(foto_arquivo.filename)}"
-            caminho_novo = os.path.join(UPLOAD_FOLDER, filename)
-            
-            foto_arquivo.save(caminho_novo)
-            foto_url = filename
+        if foto_arquivo and foto_arquivo.filename != "":
+            conteudo_bytes = foto_arquivo.read()
+            encoded_string = base64.b64encode(conteudo_bytes).decode("utf-8")
+            mime_type = foto_arquivo.content_type or "image/jpeg"
 
-            print(f"✅ Nova foto do admin salva em: {caminho_novo}")
+            foto_url = f"data:{mime_type};base64,{encoded_string}"
         else:
-            foto_url = foto_antiga_url
+            foto_url = foto_antiga_base64
 
         sql = """
             UPDATE usuarios
@@ -235,9 +229,7 @@ def up_admin(id):
         cursor.execute(sql, valores)
         conn.commit()
 
-        return {
-            "message": "Administrador atualizado com sucesso"
-        }, 200
+        return {"message": "Administrador atualizado com sucesso"}, 200
 
     except Exception as e:
         conn.rollback()
