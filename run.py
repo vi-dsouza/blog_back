@@ -26,13 +26,15 @@ CORS(
 #     path_root = os.path.join(os.getcwd(), 'config_blog')
 #     return send_from_directory(path_root, filename)
 
+# Pega o diretório do próprio arquivo run.py (raiz do projeto)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 @app.route('/config_blog/<path:filename>')
 def serve_config_blog(filename):
-    path_root = os.path.join(os.getcwd(), 'config_blog')
-    caminho_completo = os.path.join(path_root, filename)
+    path_root = os.path.join(BASE_DIR, 'config_blog')
     
-    print(f"🔍 Procurando arquivo em: {caminho_completo}")
-    print(f"📁 O arquivo existe? {os.path.exists(caminho_completo)}")
+    caminho = os.path.join(path_root, filename)
+    print(f"🔍 Procurando em: {caminho} | Existe? {os.path.exists(caminho)}")
     
     return send_from_directory(path_root, filename)
 

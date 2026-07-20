@@ -8,6 +8,9 @@ from app.services.config_service import configurar, obter_ultima_configuracao
 
 blog_bp = Blueprint("blog", __name__)
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_PATH = os.path.join(BASE_DIR, 'config_blog')
+
 @blog_bp.route("/configuracao", methods=["POST"])
 @token_required
 def criar_config(current_user_id):
@@ -16,31 +19,40 @@ def criar_config(current_user_id):
         autor = request.form.get("autor")
         descricao_blog = request.form.get("descricao_blog")
         tags_do_blog = request.form.get("tags_do_blog")
-        
-        data_str = request.form.get("data_atualizacao")
-        data_dt = datetime.strptime(data_str, '%Y-%m-%d') if data_str else datetime.now()
 
-        banner_file = request.files.get("banner") 
+        data_str = request.form.get("data_atualizacao")
+        data_dt = (
+            datetime.strptime(data_str, "%Y-%m-%d")
+            if data_str
+            else datetime.now()
+        )
+
+        banner_file = request.files.get("banner")
         banner_url_nome = None
-        
-        if banner_file and banner_file.filename != '':
-            upload_path = os.path.join(os.getcwd(), 'config_blog')
-            os.makedirs(upload_path, exist_ok=True)
-            
+
+        if banner_file and banner_file.filename != "":
+            os.makedirs(UPLOAD_PATH, exist_ok=True)
+
             filename = secure_filename(banner_file.filename)
             filename = f"{datetime.now().timestamp()}_{filename}"
 
-            banner_file.save(os.path.join(upload_path, filename))
+            caminho_completo = os.path.join(UPLOAD_PATH, filename)
+            banner_file.save(caminho_completo)
+
             banner_url_nome = filename
-            print(f"✅ Banner salvo: {filename}")
+            print(f"✅ Banner salvo com sucesso em: {caminho_completo}")
         else:
             print("⚠️ Aviso: Nenhum arquivo recebido na chave 'banner'")
 
         response, status = configurar(
-            nome_blog, data_dt, autor, 
-            tags_do_blog, descricao_blog, banner_url_nome
+            nome_blog,
+            data_dt,
+            autor,
+            tags_do_blog,
+            descricao_blog,
+            banner_url_nome,
         )
-        
+
         return jsonify(response), status
 
     except Exception as e:
