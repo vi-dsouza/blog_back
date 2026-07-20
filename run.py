@@ -26,18 +26,6 @@ CORS(
 #     path_root = os.path.join(os.getcwd(), 'config_blog')
 #     return send_from_directory(path_root, filename)
 
-# Pega o diretório do próprio arquivo run.py (raiz do projeto)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-@app.route('/config_blog/<path:filename>')
-def serve_config_blog(filename):
-    path_root = os.path.join(BASE_DIR, 'config_blog')
-    
-    caminho = os.path.join(path_root, filename)
-    print(f"🔍 Procurando em: {caminho} | Existe? {os.path.exists(caminho)}")
-    
-    return send_from_directory(path_root, filename)
-
 def start_server():
     try:
         host = os.getenv("FLASK_HOST", "127.0.0.1")
