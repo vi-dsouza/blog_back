@@ -21,9 +21,19 @@ CORS(
     supports_credentials=True
 )
 
+# @app.route('/config_blog/<path:filename>')
+# def serve_config_blog(filename):
+#     path_root = os.path.join(os.getcwd(), 'config_blog')
+#     return send_from_directory(path_root, filename)
+
 @app.route('/config_blog/<path:filename>')
 def serve_config_blog(filename):
     path_root = os.path.join(os.getcwd(), 'config_blog')
+    caminho_completo = os.path.join(path_root, filename)
+    
+    print(f"🔍 Procurando arquivo em: {caminho_completo}")
+    print(f"📁 O arquivo existe? {os.path.exists(caminho_completo)}")
+    
     return send_from_directory(path_root, filename)
 
 def start_server():
