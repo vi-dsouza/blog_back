@@ -342,3 +342,7 @@ def deletar_admin(current_user_id, id):
 def edit_admin_route(current_user_id, id):
     resultado, status = up_admin(id) 
     return jsonify(resultado), status
+
+@auth_bp.route('/ping', methods=['GET'])
+def ping():
+    return 'pong', 200
