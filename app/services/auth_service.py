@@ -6,7 +6,8 @@ import os
 import os
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 
 def criar_usuario(nome, email, senha, biografia, is_admin=False, foto_url=None):
     conn = get_connection()
@@ -202,6 +203,7 @@ def up_admin(id):
         foto_arquivo = request.files.get('foto')
         
         if foto_arquivo and foto_arquivo.filename != '':
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             if foto_antiga_url:
                 caminho_antigo = os.path.join(UPLOAD_FOLDER, foto_antiga_url)
                 if os.path.exists(caminho_antigo):
@@ -212,6 +214,8 @@ def up_admin(id):
             
             foto_arquivo.save(caminho_novo)
             foto_url = filename
+
+            print(f"✅ Nova foto do admin salva em: {caminho_novo}")
         else:
             foto_url = foto_antiga_url
 

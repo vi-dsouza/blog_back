@@ -15,7 +15,8 @@ from app.services.enviar_email import enviar_email_recuperacao
 load_dotenv()
 
 auth_bp = Blueprint("auth", __name__)
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 SECRET_KEY = os.getenv("SECRET_KEY")
 MAX_FAILED_ATTEMPTS = int(os.getenv("MAX_FAILED_ATTEMPTS", "3"))
 LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "60"))
@@ -294,12 +295,16 @@ def register(current_user_id):
             }), 400
         
         foto_url = None
-        if foto:
+        if foto and foto.filename != '':
             os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             filename = secure_filename(foto.filename)
+            
+            filename = f"{datetime.now().timestamp()}_{filename}"
+            
             caminho = os.path.join(UPLOAD_FOLDER, filename)
             foto.save(caminho)
             foto_url = filename
+            print(f"✅ Foto do autor salva em: {caminho}")
 
         response, status = criar_usuario(nome, email, senha, biografia, is_admin=is_admin, foto_url=foto_url)
         return jsonify(response), status
